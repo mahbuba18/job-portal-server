@@ -16,7 +16,7 @@ This is the **backend server** for the Job Portal application built with **Node.
 
 ---
 
-## 📦 Tech Stack
+## 📦 Technology
 
 - **Node.js**
 - **Express.js**
@@ -27,5 +27,4 @@ This is the **backend server** for the Job Portal application built with **Node.
 
 ---
 
-## 📁 Folder Structure
 
