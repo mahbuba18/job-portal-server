@@ -97,20 +97,36 @@ app.get("/categories", async (req, res) => {
     res.status(500).send("Server Error");
   }
 });
-// Get jobs for a specific category
-app.get("/categories/:id/jobs", async (req, res) => {
-  const { id } = req.params;
-  try {
-    const result = await pool.query(`
-      SELECT j.id, j.title, j.description, j.company, j.location,j.salary_range
-      FROM jobs j
-      WHERE j.category_id = $1
-    `, [id]);
 
+// Get all jobs (optionally with search)
+app.get("/jobs", async (req, res) => {
+  try {
+    const { search } = req.query;
+
+    let query = `
+      SELECT j.id, j.title, j.description, j.company, j.location, j.salary_range, c.name AS category
+      FROM jobs j
+      LEFT JOIN job_categories c ON j.category_id = c.id
+    `;
+    let values = [];
+
+    if (search) {
+      query += `
+        WHERE j.title ILIKE $1 
+        OR j.company ILIKE $1 
+        OR j.location ILIKE $1
+      `;
+      values.push(`%${search}%`);
+    }
+
+    query += " ORDER BY j.id DESC";
+
+    const result = await pool.query(query, values);
     res.json(result.rows);
+
   } catch (err) {
     console.error(err.message);
-    res.status(500).send("Server error");
+    res.status(500).send("Server Error");
   }
 });
 
