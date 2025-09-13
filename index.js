@@ -130,7 +130,7 @@ app.post("/jobs", async (req, res) => {
 app.get("/jobs", async (req, res) => {
   try {
     const { search, category } = req.query;
-    console.log(category,search);
+    // console.log(category,search);
 
     let query = `
       SELECT j.id, j.title, j.description, j.company, j.location, j.salary_range, c.name AS category
