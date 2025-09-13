@@ -16,7 +16,7 @@ app.post("/users", async (req, res) => {
     const { name, email, password_hash } = req.body;
     const newUser = await pool.query(
       "INSERT INTO users(name,email,password_hash) VALUES($1,$2,$3) RETURNING *",
-      [name,email,password_hash]
+      [name, email, password_hash]
     );
     res.json(newUser.rows[0]);
   } catch (err) {
@@ -25,35 +25,31 @@ app.post("/users", async (req, res) => {
   }
 });
 //get all users
-app.get("/users", async(req,res)=>{
-  try{
-    const allUsers=await pool.query("SELECT * FROM users")
+app.get("/users", async (req, res) => {
+  try {
+    const allUsers = await pool.query("SELECT * FROM users");
     res.json(allUsers.rows);
-
-  }catch(err){
+  } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: "Server Error" });
-
   }
-
-})
+});
 //get a user
-app.get("/users/:id",async(req,res)=>{
-  try{
-   const {id}=req.params;
-   const user=await pool.query("SELECT * FROM users WHERE id= $1",[id])
-   res.json(user.rows[0]);
-
-  }catch(err){
-    console.error(err.message)
+app.get("/users/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await pool.query("SELECT * FROM users WHERE id= $1", [id]);
+    res.json(user.rows[0]);
+  } catch (err) {
+    console.error(err.message);
   }
-})
+});
 //update a user
 
 app.put("/users/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, password_hash } = req.body; 
+    const { name, email, password_hash } = req.body;
 
     const updateUser = await pool.query(
       "UPDATE users SET name = $1, email = $2, password_hash = $3 WHERE id = $4 RETURNING *",
@@ -68,18 +64,16 @@ app.put("/users/:id", async (req, res) => {
 });
 
 //delete a user
-app.delete("/users/:id",async(req,res)=>{
-  try{
+app.delete("/users/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleteUser = await pool.query("DELETE from users WHERE id=$1", [id]);
 
-    const{id}=req.params;
-    const deleteUser=await pool.query("DELETE from users WHERE id=$1",[id])
-
-    res.json("user deleted successfully!!")
-
-  }catch(err){
+    res.json("user deleted successfully!!");
+  } catch (err) {
     console.error(err.message);
   }
-})
+});
 
 //for job category
 app.get("/categories", async (req, res) => {
@@ -115,7 +109,15 @@ app.post("/jobs", async (req, res) => {
       `INSERT INTO jobs
       (title, company, image_url, description, category_id, location, salary_range, created_at)
       VALUES($1,$2,$3,$4,$5,$6,$7,NOW()) RETURNING *`,
-      [title, company, image_url, description, category_id, location, salary_range]
+      [
+        title,
+        company,
+        image_url,
+        description,
+        category_id,
+        location,
+        salary_range,
+      ]
     );
 
     res.json(newJob.rows[0]);
@@ -124,14 +126,11 @@ app.post("/jobs", async (req, res) => {
     res.status(500).json({ error: "Server Error" });
   }
 });
-
-
-
-
-// Get all jobs (optionally with search)
+// Get all jobs (optionally with search + category)
 app.get("/jobs", async (req, res) => {
   try {
-    const { search } = req.query;
+    const { search, category } = req.query;
+    console.log(category,search);
 
     let query = `
       SELECT j.id, j.title, j.description, j.company, j.location, j.salary_range, c.name AS category
@@ -139,26 +138,37 @@ app.get("/jobs", async (req, res) => {
       LEFT JOIN job_categories c ON j.category_id = c.id
     `;
     let values = [];
+    let conditions = [];
 
+    // Search filter
     if (search) {
-      query += `
-        WHERE j.title ILIKE $1 
-        OR j.company ILIKE $1 
-        OR j.location ILIKE $1
-      `;
+      conditions.push(`(j.title ILIKE $${values.length + 1} 
+                       OR j.company ILIKE $${values.length + 1} 
+                       OR j.location ILIKE $${values.length + 1})`);
       values.push(`%${search}%`);
+    }
+
+    // // Category filter
+    // if (category) {
+    //   conditions.push(`j.category_id = $${values.length + 1}`);
+    //   values.push(category);
+    // }
+
+    // Add WHERE clause if we have conditions
+    if (conditions.length > 0) {
+      query += " WHERE " + conditions.join(" AND ");
     }
 
     query += " ORDER BY j.id DESC";
 
     const result = await pool.query(query, values);
     res.json(result.rows);
-
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server Error");
   }
 });
+
 // Get single job by ID
 app.get("/jobs/:id", async (req, res) => {
   try {
@@ -186,14 +196,31 @@ app.get("/jobs/:id", async (req, res) => {
 app.put("/jobs/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, company, image_url, description, category_id, location, salary_range } = req.body;
+    const {
+      title,
+      company,
+      image_url,
+      description,
+      category_id,
+      location,
+      salary_range,
+    } = req.body;
 
     const updatedJob = await pool.query(
       `UPDATE jobs
        SET title=$1, company=$2, image_url=$3, description=$4, category_id=$5, location=$6, salary_range=$7
        WHERE id=$8
        RETURNING *`,
-      [title, company, image_url, description, category_id, location, salary_range, id]
+      [
+        title,
+        company,
+        image_url,
+        description,
+        category_id,
+        location,
+        salary_range,
+        id,
+      ]
     );
 
     res.json(updatedJob.rows[0]);
