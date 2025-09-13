@@ -98,6 +98,36 @@ app.get("/categories", async (req, res) => {
   }
 });
 
+// Add a new job
+app.post("/jobs", async (req, res) => {
+  try {
+    const {
+      title,
+      company,
+      image_url,
+      description,
+      category_id,
+      location,
+      salary_range,
+    } = req.body;
+
+    const newJob = await pool.query(
+      `INSERT INTO jobs
+      (title, company, image_url, description, category_id, location, salary_range, created_at)
+      VALUES($1,$2,$3,$4,$5,$6,$7,NOW()) RETURNING *`,
+      [title, company, image_url, description, category_id, location, salary_range]
+    );
+
+    res.json(newJob.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Server Error" });
+  }
+});
+
+
+
+
 // Get all jobs (optionally with search)
 app.get("/jobs", async (req, res) => {
   try {
@@ -129,7 +159,61 @@ app.get("/jobs", async (req, res) => {
     res.status(500).send("Server Error");
   }
 });
+// Get single job by ID
+app.get("/jobs/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const job = await pool.query(
+      `SELECT j.*, c.name AS category
+       FROM jobs j
+       LEFT JOIN job_categories c ON j.category_id = c.id
+       WHERE j.id = $1`,
+      [id]
+    );
 
+    if (job.rows.length === 0) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    res.json(job.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Update a job
+app.put("/jobs/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, company, image_url, description, category_id, location, salary_range } = req.body;
+
+    const updatedJob = await pool.query(
+      `UPDATE jobs
+       SET title=$1, company=$2, image_url=$3, description=$4, category_id=$5, location=$6, salary_range=$7
+       WHERE id=$8
+       RETURNING *`,
+      [title, company, image_url, description, category_id, location, salary_range, id]
+    );
+
+    res.json(updatedJob.rows[0]);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Server Error" });
+  }
+});
+
+// Delete a job
+app.delete("/jobs/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query("DELETE FROM jobs WHERE id=$1", [id]);
+    res.json({ message: "Job deleted successfully!" });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Server Error" });
+  }
+});
 app.listen(5000, () => {
   console.log("Server has started  at the port 5000");
 });
